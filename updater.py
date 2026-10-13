@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 import time
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import aiohttp
@@ -10,7 +10,7 @@ from aiosqlite import Connection, connect
 from dotenv import load_dotenv
 
 from database.initialization import init_db
-from database.marks import (
+from database.update_school_data import (
     update_lessons,
     update_marks,
     update_persons,
@@ -51,6 +51,7 @@ async def auto_update_db(db: Connection) -> None:
                 get_work_types(session=session),
                 get_lessons_and_works(session=session),
             )
+
             marks, persons, subjects, work_types, lessons_and_works = new_data
             await update_marks(db=db, marks=marks)
             await update_persons(db=db, persons=persons)
@@ -64,7 +65,7 @@ async def auto_update_db(db: Connection) -> None:
             f"API вернул HTTP-ошибку {e.status} по url {e.request_info.url}"
         )
 
-    except (TimeoutError, aiohttp.ClientError):
+    except (TimeoutError, aiohttp.ClientError, aiohttp.ClientConnectionError):
         logger.exception("Ошибка соединения с API")
 
     except (TypeError, ValueError, KeyError):
@@ -99,7 +100,8 @@ async def get_lessons_and_works(
     session: aiohttp.ClientSession,
 ) -> tuple[list[tuple[int, int, str, str]], list[tuple[int, int, int]]]:
     date_from = "2026-09-01"
-    date_to = str(date.today())
+    today = date.today()
+    date_to = str(today + timedelta(days=14))
     url = f"edu-groups/{GROUP}/lessons/{date_from}/{date_to}"
 
     async with session.get(url) as response:
@@ -131,7 +133,8 @@ async def get_work_types(
 
 async def get_marks(session: aiohttp.ClientSession) -> list[tuple[int, int, int, int]]:
     date_from = "2026-09-01"
-    date_to = str(date.today())
+    today = date.today()
+    date_to = str(today + timedelta(days=14))
     url = f"edu-groups/{GROUP}/marks/{date_from}/{date_to}"
     async with session.get(url) as response:
         marks = await response.json()
@@ -139,7 +142,7 @@ async def get_marks(session: aiohttp.ClientSession) -> list[tuple[int, int, int,
 
 
 async def main():
-    DB_DIR = Path(__file__).resolve().parent / "debugging" / "beta_database.db"
+    DB_DIR = Path(__file__).resolve().parent / "data" / "beta_database.db"
     async with connect(DB_DIR) as db:
         await init_db(db=db)
         await auto_update_db(db=db)

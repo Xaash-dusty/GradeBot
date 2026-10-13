@@ -9,8 +9,12 @@ from dotenv import load_dotenv
 
 from database.initialization import init_db
 from handlers.common import router as common_router
+from handlers.dnevnik_connection import router as link_dnevnik_router
+from handlers.fallbacks import router as fallbacks_router
 from middlewares.db_middleware import DatabaseMiddleware
 from updater import auto_update_db
+
+# 1. ---------------- Логеры ------------------
 
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
@@ -28,14 +32,27 @@ console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(formatter)
 
-file_handler = logging.FileHandler(filename="logs.log", mode="w", encoding="utf-8")
-file_handler.setLevel(logging.DEBUG)
-file_handler.setFormatter(formatter)
+session_file_handler = logging.FileHandler(
+    filename="logs/sessional_logs.log", mode="w", encoding="utf-8"
+)
+session_file_handler.setLevel(logging.DEBUG)
+session_file_handler.setFormatter(formatter)
+
+
+timeless_file_handler = logging.FileHandler(
+    filename="logs/timeless_logs.log", mode="a", encoding="utf-8"
+)
+timeless_file_handler.setLevel(logging.DEBUG)
+timeless_file_handler.setFormatter(formatter)
+
 
 root_logger.addHandler(console_handler)
-root_logger.addHandler(file_handler)
+root_logger.addHandler(session_file_handler)
+root_logger.addHandler(timeless_file_handler)
 
 logger = logging.getLogger(__name__)
+
+# 2. ------------------ ТОКЕН и запуск бота -------------------
 
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
@@ -54,12 +71,11 @@ async def periodic_update(db: aiosqlite.Connection, interval: int) -> None:
 
 
 async def main():
-    dp.include_routers(common_router)
+    dp.include_routers(common_router, link_dnevnik_router, fallbacks_router)
 
     DB_DIR = Path(__file__).resolve().parent / "data" / "database.db"
     async with aiosqlite.connect(DB_DIR) as db:
         db.row_factory = aiosqlite.Row
-        # await db.execute("PRAGMA foreign_keys = ON;")
         await init_db(db=db)
         asyncio.create_task(periodic_update(db=db, interval=120))
 

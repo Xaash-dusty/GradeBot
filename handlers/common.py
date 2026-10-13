@@ -1,34 +1,28 @@
-import aiosqlite
 from aiogram import Router
 from aiogram.enums import ButtonStyle
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from database.telegram_users import add_user
+from keyboards.reply_menus import start_menu_kb
 
 router = Router()
 
 
-@router.message(CommandStart())
-async def cmd_start(message: Message, db: aiosqlite.Connection):
+@router.message(CommandStart(), StateFilter(None))
+async def cmd_start(message: Message):
     await message.answer(
-        "Бот запущен\nТеперь ты можешь начать отслеживать свои оценки и пользоваться ботом по максимуму\nДля вызова справки /help"
-    )
-    await add_user(
-        db=db,
-        tg_id=message.from_user.id,
-        username=message.from_user.username,
-        first_name=message.from_user.first_name,
+        "Бот запущен\nТеперь ты можешь начать отслеживать свои оценки и пользоваться ботом по максимуму\nДля вызова справки /help",
+        reply_markup=start_menu_kb(),
     )
 
 
-@router.message(Command("help"))
+@router.message(Command("help"), StateFilter(None))
 async def cmd_help(message: Message):
     text = "Инструкция по использованию бота"
     await message.answer(text)
 
 
-@router.message(Command("test"))
+@router.message(Command("test"), StateFilter(None))
 async def test(m: Message):
     text = "<b>Какой-то</b> <code>текст</code>"
     keyboard = InlineKeyboardMarkup(

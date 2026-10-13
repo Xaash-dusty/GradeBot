@@ -69,11 +69,34 @@ async def init_db(db: aiosqlite.Connection) -> None:
     last_activity TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS user_accounts (
+    id INTEGER PRIMARY KEY,
+    telegram_id INTEGER NOT NULL UNIQUE,
+    person_id INTEGER NOT NULL UNIQUE,
+    creation_date TEXT NOT NULL DEFAULT (datetime('now')),
+    is_active INTEGER NOT NULL DEFAULT 1,
+    FOREIGN KEY (telegram_id) REFERENCES users (telegram_id) ON DELETE CASCADE,
+    FOREIGN KEY (person_id) REFERENCES persons (person_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS roles (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE
+    );
+
     CREATE TABLE IF NOT EXISTS user_roles (
     id INTEGER PRIMARY KEY,
     telegram_id INTEGER NOT NULL UNIQUE,
-    role TEXT NOT NULL DEFAULT 'guest',
-    FOREIGN KEY (telegram_id) REFERENCES users (telegram_id) ON DELETE CASCADE
+    role_id INTEGER NOT NULL DEFAULT 4,
+    FOREIGN KEY (telegram_id) REFERENCES users (telegram_id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS permissions (
+    id INTEGER PRIMARY KEY,
+    role_id INTEGER NOT NULL,
+    permission TEXT NOT NULL,
+    UNIQUE (role_id, permission)
     );
 
     CREATE TABLE IF NOT EXISTS bans (
@@ -85,20 +108,27 @@ async def init_db(db: aiosqlite.Connection) -> None:
     );
     """
 
+    roles_data = [("creator",), ("moder",), ("user",), ("guest",)]
+    permissions_data = [
+        (1, "can_ban_user"),
+        (2, "can_ban_user"),
+    ]
     await db.executescript(create_tables_query)
+    await db.executemany("INSERT OR IGNORE INTO roles (name) VALUES (?)", roles_data)
+    await db.executemany(
+        "INSERT OR IGNORE INTO permissions (role_id, permission) VALUES (?, ?)",
+        permissions_data,
+    )
     await db.commit()
+
     logger.info("Database has been initialized")
 
 
 async def main():
-    DB_DIR = Path(__file__).resolve().parent.parent / "debugging" / "beta_database.db"
-    async with aiosqlite.connect(DB_DIR) as db:
+    DB_FILE = Path(__file__).resolve().parent.parent / "data" / "beta_database.db"
+    async with aiosqlite.connect(DB_FILE) as db:
         await init_db(db=db)
 
 
 if __name__ == "__main__":
-    logging.getLogger().setLevel(logging.DEBUG)
-    logging.getLogger("aiosqlite").setLevel(logging.WARNING)
-    logging.getLogger("asyncio").setLevel(logging.WARNING)
-
     asyncio.run(main())

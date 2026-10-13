@@ -40,7 +40,5 @@ async def update_works(db: Connection, works: list[tuple[int, int, int]]) -> Non
 async def update_marks(db: Connection, marks: list[tuple[int, int, int, int]]) -> None:
     query = """INSERT INTO marks (mark_id, person_id, work_id, value) VALUES (?, ?, ?, ?)
         ON CONFLICT (mark_id) DO UPDATE SET value = excluded.value"""
-    # Может быть стоит убрать OR IGNORE ведь если в дневнике оценку изменили то у нее id не поменяется и она не измениться в бд
-    # Возможно стоит сделать отдельную команду которая полностью стирает и заново создает таблицы - абсолютная синхронизация
     await db.executemany(query, marks)
     await db.commit()
