@@ -14,20 +14,13 @@ async def is_valid_person_id(db: Connection, person_id: int) -> bool:
         return row is not None and row["linked_id"] is None
 
 
-async def has_any_account(db: Connection, tg_id: int) -> bool:
+async def get_account_status(db: Connection, tg_id: int) -> str:
     async with db.execute(
-        "SELECT 1 FROM user_accounts WHERE telegram_id = ? LIMIT 1", (tg_id,)
-    ) as cursor:
+            "SELECT is_active FROM user_accounts WHERE telegram_id = ? LIMIT 1", (tg_id,)
+        ) as cursor:
         row = await cursor.fetchone()
-        return row is not None
-
-
-async def is_active_account(db: Connection, tg_id: int) -> bool:
-    async with db.execute(
-        "SELECT is_active FROM user_accounts WHERE telegram_id = ? LIMIT 1", (tg_id,)
-    ) as cursor:
-        row = await cursor.fetchone()
-        return row["is_active"] == 1
+        if row is None: return "None"
+        return "active" if row["is_active"] == 1 else "inactive"
 
 
 async def link_dnevnik(db: Connection, tg_id: int, person_id: int) -> bool:

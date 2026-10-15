@@ -5,7 +5,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 from aiosqlite import Connection
 
-from database.user_management import add_user
+from database.registration import add_user
 from database.verifications import is_banned
 
 
@@ -20,6 +20,9 @@ class DatabaseMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:
+        if not event.from_user:
+            return await handler(event, data)
+
         data["db"] = self.db
 
         await add_user(
@@ -30,8 +33,9 @@ class DatabaseMiddleware(BaseMiddleware):
         )
 
         in_ban = await is_banned(db=self.db, tg_id=event.from_user.id)
+
+        if in_ban:
+            await event.answer("Вы забанены", show_alert=True)
+            return
         
-        if not in_ban:
-            return await handler(event, data)
-        else:
-            await event.answer("Вы забанены")
+        return await handler(event, data)

@@ -1,30 +1,84 @@
-from aiogram import Router
+from aiogram import F, Router
 from aiogram.enums import ButtonStyle
 from aiogram.filters import Command, CommandStart, StateFilter
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+)
+from aiosqlite import Connection
 
-from keyboards.reply_menus import start_menu_kb
+from database.dnevnik_relations import get_account_status
+from keyboards.common_menus import (
+    active_account_start_menu,
+    inactive_account_start_menu,
+)
 
 router = Router()
 
 
 @router.message(CommandStart(), StateFilter(None))
-async def cmd_start(message: Message):
-    await message.answer(
-        "Бот запущен\nТеперь ты можешь начать отслеживать свои оценки и пользоваться ботом по максимуму\nДля вызова справки /help",
-        reply_markup=start_menu_kb(),
-    )
+@router.callback_query(F.data == "back:home", StateFilter(None))
+async def cmd_start(event: Message | CallbackQuery, db: Connection):
+    is_active = await get_account_status(db=db, tg_id=event.from_user.id) == "active"
+    is_message = isinstance(event, Message)
+    if is_active:
+        text = "Привет, здесь ты можешь отслеживать свои оценки и сравнивать их с оценками других. Помимо обычного просмотра оценок тут есть и другие интересные и полезын фичи, которые ты обязательно должен попробовать\n\nПрямо сейчас ты уже можешь посмотреть сегодняшние оценки или увидеть рейтинг среднего балла всего класса по физике. Выбери, что хочешь из меню ниже\nДля вызова справки /help"
+        if is_message:
+            await event.answer(text, reply_markup=active_account_start_menu())
+        else:
+            await event.message.edit_text(
+                text, reply_markup=active_account_start_menu()
+            )
+            await event.answer()
+    else:
+        text = "Привет, здесь ты можешь отслеживать свои оценки и сравнивать их с оценками других. Помимо обычного просмотра оценок тут есть и другие интересные и полезные фичи, которые ты обязательно должен попробовать\n\nЕсли ты хочешь получить свои оценки и получить доступ к другим функциям, то тебе неоходимо активировать аккаунт /activate"
+        if is_message:
+            await event.answer(text, reply_markup=inactive_account_start_menu())
+        else:
+            await event.message.edit_text(
+                text, reply_markup=inactive_account_start_menu()
+            )
+            await event.answer()
 
 
 @router.message(Command("help"), StateFilter(None))
 async def cmd_help(message: Message):
-    text = "Инструкция по использованию бота"
+    text = """Инструкции по использованию бота
+/start - Запуск бота
+/activate - Восстановить дневник
+/deactivate - Отвязать дневник
+/cancel - Отменить форму
+/my_marks - Мои оценки (меню)
+/my_marks_all - Все мои оценки
+/help - Вызвать данную справку
+
+Связаться со мной — @Xaash_dusty
+"""
     await message.answer(text)
 
 
 @router.message(Command("test"), StateFilter(None))
 async def test(m: Message):
-    text = "<b>Какой-то</b> <code>текст</code>"
+    text = (
+        "<b>🔴 Главный заголовок (Жирный)</b>\n"
+        "<i>Привет! Это демонстрация всех HTML-возможностей.</i>\n\n"
+        "📌 <b>Стили текста:</b>\n"
+        "• Можно сделать <u>подчеркнутым</u>\n"
+        "• Или даже <s>зачеркнутым словом</s>\n"
+        "• А важную тайну спрятать в <tg-spoiler>вот такой спойлер</tg-spoiler>\n\n"
+        "💻 <b>Код (кликни для копирования):</b>\n"
+        "Ваш токен: <code>777555:secret</code>\n"
+        "<pre><code class='language-python'>\n"
+        "print('Это многострочный код на Python')\n"
+        "</code></pre>\n"
+        "💬 <b>Цитаты:</b>\n"
+        "<blockquote>Обычная статичная цитата</blockquote>\n"
+        "<blockquote expandable>Много текста, который по умолчанию свернут в компактный блок для удобства чтения</blockquote>\n\n"
+        "🔗 <b>Навигация:</b>\n"
+        "Посети наш <a href='https://github.com'>Официальный сайт</a>."
+    )
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -42,4 +96,4 @@ async def test(m: Message):
             ],
         ]
     )
-    await m.answer(text, parse_mode="HTML", reply_markup=keyboard)
+    await m.answer(text, reply_markup=keyboard)

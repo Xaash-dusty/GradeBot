@@ -1,10 +1,42 @@
 import asyncio
 import logging
+import secrets
+import string
 from pathlib import Path
 
 import aiosqlite
 
 logger = logging.getLogger(__name__)
+
+
+async def populate_person_passwords(db: aiosqlite.Connection) -> None:
+    async with db.execute("""SELECT p.person_id FROM persons AS p
+        LEFT JOIN person_passwords AS pp ON pp.person_id = p.person_id
+        WHERE pp.person_id IS NULL
+    """) as cursor:
+        rows = await cursor.fetchall()
+    if not rows:
+        return
+
+    person_ids = [row["person_id"] for row in rows]
+
+    async with db.execute("SELECT password FROM person_passwords") as cursor:
+        rows = await cursor.fetchall()
+        existing_passwords = {row[0] for row in rows}
+
+    passwords = set()
+
+    while len(passwords) < len(person_ids):
+        password = "".join(
+            secrets.choice(string.ascii_letters + string.digits) for _ in range(8)
+        )
+        if password not in existing_passwords:
+            passwords.add(password)
+
+    data = list(zip(person_ids, passwords))
+
+    await db.executemany("INSERT INTO person_passwords (person_id, password) VALUES (?, ?)", data)
+    await db.commit()
 
 
 async def init_db(db: aiosqlite.Connection) -> None:
@@ -59,7 +91,6 @@ async def init_db(db: aiosqlite.Connection) -> None:
     FOREIGN KEY (work_id) REFERENCES works (work_id)
     );
 
-
     CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY,
     telegram_id INTEGER NOT NULL UNIQUE,
@@ -77,6 +108,13 @@ async def init_db(db: aiosqlite.Connection) -> None:
     is_active INTEGER NOT NULL DEFAULT 1,
     FOREIGN KEY (telegram_id) REFERENCES users (telegram_id) ON DELETE CASCADE,
     FOREIGN KEY (person_id) REFERENCES persons (person_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS person_passwords (
+    id INTEGER PRIMARY KEY,
+    person_id INTEGER NOT NULL UNIQUE,
+    password TEXT NOT NULL UNIQUE,
+    FOREIGN KEY (person_id) REFERENCES persons (person_id)
     );
 
     CREATE TABLE IF NOT EXISTS roles (
@@ -119,14 +157,16 @@ async def init_db(db: aiosqlite.Connection) -> None:
         "INSERT OR IGNORE INTO permissions (role_id, permission) VALUES (?, ?)",
         permissions_data,
     )
+    await populate_person_passwords(db=db)
     await db.commit()
 
     logger.info("Database has been initialized")
 
 
 async def main():
-    DB_FILE = Path(__file__).resolve().parent.parent / "data" / "beta_database.db"
+    DB_FILE = Path(__file__).resolve().parent.parent / "data" / "database.db"
     async with aiosqlite.connect(DB_FILE) as db:
+        db.row_factory = aiosqlite.Row
         await init_db(db=db)
 
 
