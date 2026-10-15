@@ -9,10 +9,9 @@ from aiogram.types import (
 )
 from aiosqlite import Connection
 
-from database.dnevnik_relations import get_account_status
+from database.dnevnik_account import get_account_status
 from keyboards.common_menus import (
-    active_account_start_menu,
-    inactive_account_start_menu,
+    start_menu,
 )
 
 router = Router()
@@ -25,33 +24,30 @@ async def cmd_start(event: Message | CallbackQuery, db: Connection):
     is_message = isinstance(event, Message)
     if is_active:
         text = "Привет, здесь ты можешь отслеживать свои оценки и сравнивать их с оценками других. Помимо обычного просмотра оценок тут есть и другие интересные и полезын фичи, которые ты обязательно должен попробовать\n\nПрямо сейчас ты уже можешь посмотреть сегодняшние оценки или увидеть рейтинг среднего балла всего класса по физике. Выбери, что хочешь из меню ниже\nДля вызова справки /help"
-        if is_message:
-            await event.answer(text, reply_markup=active_account_start_menu())
-        else:
-            await event.message.edit_text(
-                text, reply_markup=active_account_start_menu()
-            )
-            await event.answer()
     else:
-        text = "Привет, здесь ты можешь отслеживать свои оценки и сравнивать их с оценками других. Помимо обычного просмотра оценок тут есть и другие интересные и полезные фичи, которые ты обязательно должен попробовать\n\nЕсли ты хочешь получить свои оценки и получить доступ к другим функциям, то тебе неоходимо активировать аккаунт /activate"
-        if is_message:
-            await event.answer(text, reply_markup=inactive_account_start_menu())
-        else:
-            await event.message.edit_text(
-                text, reply_markup=inactive_account_start_menu()
-            )
-            await event.answer()
+        text = "Привет, здесь ты можешь отслеживать свои оценки и сравнивать их с оценками других. Помимо обычного просмотра оценок тут есть и другие интересные и полезные фичи, которые ты обязательно должен попробовать\n\nЕсли ты хочешь получить свои оценки и получить доступ к другим функциям, то тебе неоходимо активировать аккаунт"
+
+    if is_message:
+        await event.answer(text, reply_markup=start_menu(is_active=is_active))
+    else:
+        await event.message.edit_text(
+            text, reply_markup=start_menu(is_active=is_active)
+        )
+        await event.answer()
 
 
 @router.message(Command("help"), StateFilter(None))
 async def cmd_help(message: Message):
     text = """Инструкции по использованию бота
 /start - Запуск бота
-/activate - Восстановить дневник
-/deactivate - Отвязать дневник
+/activate - Активировать дневник
+/deactivate - Деактивировать дневник
 /cancel - Отменить форму
 /my_marks - Мои оценки (меню)
 /my_marks_all - Все мои оценки
+/my_marks_table - Все мои оценки (в виде таблицы)
+/my_marks_subject - Получить подробную информацию о своих оценках по предмету
+/my_final - Итоговые оценки и небольшой анализ
 /help - Вызвать данную справку
 
 Связаться со мной — @Xaash_dusty

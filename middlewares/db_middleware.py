@@ -5,8 +5,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 from aiosqlite import Connection
 
-from database.registration import add_user
-from database.verifications import is_banned
+from database.user_account import add_user, is_banned
 
 
 class DatabaseMiddleware(BaseMiddleware):

@@ -10,14 +10,14 @@ from aiogram.enums import ParseMode
 from dotenv import load_dotenv
 
 from database.initialization import init_db
-from handlers.check_password import router as password_router
 from handlers.common import router as common_router
 from handlers.dnevnik_activation import router as dnevnik_activation_router
 from handlers.fallbacks import router as fallbacks_router
-from handlers.own_grades import router as own_grades_router
-from handlers.subject_waiting import router as subject_waiting_router
+from handlers.personal_marks import router as personal_marks_router
 from middlewares.auth_middleware import AuthMiddleware
 from middlewares.db_middleware import DatabaseMiddleware
+from state_handlers.check_password import router as password_сhecking_router
+from state_handlers.personal_subject import router as personal_subject_router
 from updater import auto_update_db
 
 # 1. ---------------- Логеры ------------------
@@ -78,11 +78,11 @@ async def periodic_update(db: aiosqlite.Connection, interval: int) -> None:
 
 async def main():
     dp.include_routers(
-        password_router,
-        subject_waiting_router,
+        password_сhecking_router,
+        personal_subject_router,
         common_router,
         dnevnik_activation_router,
-        own_grades_router,
+        personal_marks_router,
         fallbacks_router,
     )
 

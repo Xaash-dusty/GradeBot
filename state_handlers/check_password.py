@@ -6,8 +6,8 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
 from aiosqlite import Connection
 
-from database.dnevnik_relations import is_valid_person_id, link_dnevnik
-from database.registration import get_person_id_by_password
+from database.dnevnik_account import link_dnevnik
+from database.user_account import get_person_id_by_password, is_valid_person_id
 
 logger = logging.getLogger(__name__)
 

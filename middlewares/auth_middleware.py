@@ -6,8 +6,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, TelegramObject
 from aiosqlite import Connection
 
-from database.dnevnik_relations import get_account_status
-from handlers.check_password import AuthStates
+from database.dnevnik_account import get_account_status
+from state_handlers.check_password import AuthStates
 
 
 class AuthMiddleware(BaseMiddleware):
@@ -29,9 +29,7 @@ class AuthMiddleware(BaseMiddleware):
             return await handler(event, data)
 
         # Проверяем статус аккаунта
-        account_status = await get_account_status(db=db, tg_id=event.from_user.id)
-
-        if account_status == "None":
+        if await get_account_status(db=db, tg_id=event.from_user.id) == "None":
             # Включаем состояние ожидания пароля
             await state.set_state(AuthStates.waiting_for_password)
 

@@ -11,7 +11,6 @@ def my_marks_kb():
             text="Все оценки", callback_data="my_marks:all", style=ButtonStyle.SUCCESS
         )
     )
-    # Возможно удобно добавить reply клавиатуру со всеми предметами
     builder.add(
         InlineKeyboardButton(text="Статистика", callback_data="my_marks:statistics")
     )
@@ -53,6 +52,40 @@ def my_marks_back_kb():
     return builder.as_markup()
 
 
+def my_marks_all_kb():
+    builder = InlineKeyboardBuilder()
+
+    builder.add(
+        InlineKeyboardButton(
+            text="Получить в виде таблицы",
+            callback_data="my_marks:all:table",
+            style=ButtonStyle.PRIMARY,
+        )
+    )
+
+    builder.add(
+        InlineKeyboardButton(
+            text="Назад", callback_data="back:my_marks", style=ButtonStyle.DANGER
+        )
+    )
+
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def my_marks_all_back_kb():
+    builder = InlineKeyboardBuilder()
+
+    builder.add(
+        InlineKeyboardButton(
+            text="Назад", callback_data="back:my_marks:all", style=ButtonStyle.DANGER
+        )
+    )
+
+    builder.adjust(1)
+    return builder.as_markup()
+
+
 def my_marks_latest_kb():
     builder = InlineKeyboardBuilder()
 
@@ -85,9 +118,11 @@ def my_marks_latest_kb():
 
 def my_marks_subject_kb(subjects):
     builder = ReplyKeyboardBuilder()
-    
+
     for subject in subjects:
-        builder.button(text=subject['subject'])
+        builder.button(text=subject["subject"])
 
     builder.adjust(4)
-    return builder.as_markup(resize_keyboard=True)
+    return builder.as_markup(
+        resize_keyboard=True, input_field_placeholder="Пример: Алгебра"
+    )
